@@ -23,6 +23,8 @@ In today's lab you will...
 ```{r}
 library(tidyverse)
 library(palmerpenguins)
+library(ggplot2)
+
 theme_set(theme_bw(18))
 
 ```
@@ -258,6 +260,78 @@ penguins %>%
 
 ```
 
+```{r}
+crayfish <- read_csv(here::here("week1", "crayfish.csv")) |> drop_na()
+```
+
+```{r}
+#Histogram
+crayfish |>
+  ggplot(aes(x = Length_mm)) +
+  geom_histogram()
+```
+
+```{r}
+crayfish |>
+  ggplot(aes(Sex, fill = Sex)) +
+  geom_bar()
+```
+
+```{r}
+size <- crayfish |>
+  group_by(Conc_Code) |>
+  summarise(mean = mean(Length_mm, na.rm = TRUE))
+```
+
+```{r}
+crayfish |>
+  count(Length_mm) |>
+  group_by(Conc_Code) |>
+  mutate(mean = mean(Length_mm))
+```
+
+
+```{r}
+size_summary <- crayfish %>%
+  group_by(Conc_Code) %>%
+  summarise(mean_length = mean(Length_mm, na.rm = TRUE))
+ggplot(size_summary, aes(x = Conc_Code, y = mean_length, fill = Conc_Code)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Nickel Concentration", 
+       y = "Mean Length (mm)",
+       title = "Mean Crayfish Length by Nickel Concentration",
+       fill = "Ni Level") +
+  scale_fill_manual(
+    values = c(
+      "C" = "orange",
+      "L" = "pink",
+      "ML" = "purple",
+      "M" = "green",
+      "MH" = "blue3",
+      "H" = "red"
+    ),
+    labels = c(
+      "C" = "Control",
+      "L" = "Low",
+      "ML" = "Medium-Low",
+      "M" = "Medium",
+      "MH" = "Medium-High",
+      "H" = "High"
+    )
+  ) +
+  coord_cartesian(ylim = c(15, 19))   # zoom in to exaggerate differences
+
+
+
+
+```
+```{r}
+size_summary
+```
+
+
 ## Finished?
 
 If you wrap up before lab is over, head over to the final project page on the course website and look at the section [Model and response options](https://eds-222-stats-f25.github.io/final-project.html#model-and-response-options). Your final project will require you to choose a question and data to investigate using a model *we won't teach you in class*. The defining characteristic for these models are the **response variable** they can handle. Start thinking up a question and looking for data where the response variable has characteristics listed in the [Model and response options](https://eds-222-stats-f25.github.io/final-project.html#model-and-response-options) table. Keep in mind that transformations and merging datasets are both options, so even if the raw data you find don't match one of the eligible models, you may be able to derive something that does. Happy hunting!
+
+
