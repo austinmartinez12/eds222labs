@@ -154,8 +154,10 @@ For more details about vapor pressure deficit and its relationship with fires, s
 
 ```{r}
 #| label: fit-model
-
-
+poisson_model <- glm(n_fires ~ mean_vpd_kpa,
+                     data = csv,
+                     family = poisson(link = "log"))
+poisson_model
 
 ```
 
@@ -167,9 +169,30 @@ As with logistic regression, the coefficients of a Poisson regression model are 
 
 ```{r}
 #| label: predict-fires
+pred_grid <- expand_grid(mean_vpd_kpa = seq(from = 1,
+                                            to = 3,
+                                            by = .1))
 
 
+class_model_se <- predict(object = poisson_model,
+                          newdata = expand_grid(mean_vpd_kpa = seq(from = 1,
+                                                                   to = 3,
+                                                                   by =.1)),
+                          type = 'link',
+                          se.fit = TRUE)
 
+# Go from link space to response space
+linkinv <- family(poisson_model)$linkinv
+
+class_model_pred <- pred_grid %>%
+  mutate(
+    logit_lam = class_model_se$fit,
+    logit_lam_se = class_model_se$se.fit,
+    logit_lam_lwr = qnorm(.025, mean = logit_lam, sd = logit_lam_se),
+         logit_lam_upr =  qnorm(.975, mean = logit_lam, sd = logit_lam_se),
+         lam = linkinv(logit_lam),
+         lam_lwr = linkinv(logit_lam_lwr),
+         lam_upr = linkinv(logit_lam_upr))
 ```
 
 **Plot the raw data with the predictions. Your figure should look something like the figure below.**
@@ -179,7 +202,11 @@ As with logistic regression, the coefficients of a Poisson regression model are 
 ```{r}
 #| label: plot-predictions
 
-
+ggplot(class_model_pred, aes(x = mean_vpd_kpa, y = lam)) +
+  geom_ribbon(aes(ymin = lam_lwr, ymax = lam_upr), alpha = 0.2) +
+  geom_line() +
+  geom_point() +
+  theme_classic()
 
 ```
 
@@ -188,12 +215,47 @@ As with logistic regression, the coefficients of a Poisson regression model are 
 Seeing a scatter plot of mean VPD and the number of fires in a year, an uncritical statistics student may think to fit a linear model. But the fact that the response is a *count* should suggest another approach is necessary. Contrast the model summary and predictions from your Poisson model against a linear model.
 
 1.  Create a new model using `lm()`.
+
+```{r}
+wildfire_lm <- lm(n_fires ~ mean_vpd_kpa,
+                     data = csv)
+```
+
 2.  Compare the summaries of your Poisson model and the linear model.\
     **Is the coefficient for `mean_vpd_kpa` significant in both models? What does that mean for your inferences?**
+
+```{r}
+summary_wildfire_lm <- summary(wildfire_lm)
+summary_wildfire_lm
+```
+
+```{r}
+summary_poisson_model <- summary(poisson_model)
+summary_poisson_model
+```
+
+
 3.  Use predictions and components of the linear model to answer the following questions.\
     **What is the estimate for** $\sigma$ **in your linear model?\
+```{r}
+summary_wildfire_lm$sigma
+```
+    
     What does the linear model predict** $\mu$ **is** **when the VPD is at the minimum value in the dataset?\
+```{r}
+summary_wildfire_lm$coefficients[1]
+```
+-15.934
+5.3
     What is the 95% interval for the predicted number of fires for that mean and standard deviation (hint: use `qnorm()`)?\
-    Why doesn't that interval make any sense?**
 
+```{r}
+qnorm(c(.025, 0.975), mean = 5.30, 8.44)
+```
+
+    Why doesn't that interval make any sense?**
+because we cant give negative fires 
 **Based on your answers to the questions above, why is using a properly specified model important?**
+
+
+
